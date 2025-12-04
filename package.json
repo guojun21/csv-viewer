@@ -1,0 +1,48 @@
+{
+  "name": "csv-viewer",
+  "version": "1.0.0",
+  "description": "A powerful CSV data viewer with sortable and configurable columns",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "package": "vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.csv-viewer.app",
+    "productName": "CSV Viewer",
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs",
+      "package.json"
+    ]
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "dayjs": "^1.11.10",
+    "electron-store": "^11.0.2",
+    "papaparse": "^5.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^3.1.0",
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "vite": "^4.5.0",
+    "wait-on": "^7.2.0"
+  }
+}

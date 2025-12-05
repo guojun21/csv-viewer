@@ -3,8 +3,8 @@ import './TabBar.css'
 
 const TabBar = ({ activeTab, onTabChange }) => {
   const tabs = [
-    { id: 'csv-viewer', label: 'CSV 查看器', icon: '📊' },
-    { id: 'cursor-dashboard', label: 'Cursor Dashboard', icon: '⚡' }
+    { id: 'data-viewer', label: '数据分析', icon: '📊' },
+    { id: 'cursor-dashboard', label: '账户设置', icon: '⚙️' }
   ]
 
   return (

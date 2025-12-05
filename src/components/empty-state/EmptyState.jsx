@@ -25,7 +25,7 @@ const formatRelativeTime = (timestamp) => {
   return new Date(timestamp).toLocaleDateString()
 }
 
-function EmptyState({ onFileSelect, isLoading, recentFiles = [], onOpenRecent, onClearRecent }) {
+function EmptyState({ onFileSelect, onPullData, isPulling, isLoading, recentFiles = [], onOpenRecent, onClearRecent }) {
   if (isLoading) {
     return (
       <div className="empty-state">
@@ -43,18 +43,38 @@ function EmptyState({ onFileSelect, isLoading, recentFiles = [], onOpenRecent, o
       <div className="welcome-header">
         <div className="app-logo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="8" y1="13" x2="16" y2="13"/>
-            <line x1="8" y1="17" x2="16" y2="17"/>
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
           </svg>
         </div>
-        <h1 className="app-name">CSV Viewer</h1>
-        <p className="app-tagline">轻量级 · 高性能</p>
+        <h1 className="app-name">Cursor Tracker</h1>
+        <p className="app-tagline">使用数据追踪 · 智能分析</p>
       </div>
 
       {/* 操作按钮 */}
       <div className="action-cards">
+        {onPullData && (
+          <button 
+            className="action-card primary" 
+            onClick={onPullData}
+            disabled={isPulling}
+          >
+            <div className="action-icon">
+              {isPulling ? (
+                <div className="action-spinner"></div>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              )}
+            </div>
+            <span className="action-label">{isPulling ? '同步中...' : 'Pull 数据'}</span>
+            <span className="action-hint">从 Cursor 拉取最新使用数据</span>
+          </button>
+        )}
+        
         <button className="action-card" onClick={onFileSelect}>
           <div className="action-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -62,6 +82,7 @@ function EmptyState({ onFileSelect, isLoading, recentFiles = [], onOpenRecent, o
             </svg>
           </div>
           <span className="action-label">打开文件</span>
+          <span className="action-hint">手动选择数据文件</span>
         </button>
       </div>
 
@@ -110,7 +131,7 @@ function EmptyState({ onFileSelect, isLoading, recentFiles = [], onOpenRecent, o
           <polyline points="17 8 12 3 7 8"/>
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
-        <span>拖放 CSV 文件到此处</span>
+        <span>拖放数据文件到此处</span>
       </div>
     </div>
   )

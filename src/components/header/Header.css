@@ -187,27 +187,153 @@
   height: 16px;
 }
 
-/* Cursor 导出按钮 */
-.cursor-export-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
-  padding: 8px 14px;
+/* 同步控制组 */
+.sync-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+/* 同步间隔选择器 */
+.sync-interval-wrapper {
+  position: relative;
+}
+
+.sync-interval-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sync-interval-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sync-interval-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sync-interval-btn .dropdown-arrow {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+}
+
+.interval-label {
   font-weight: 500;
+  min-width: 40px;
 }
 
-.cursor-export-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #5558e3, #7c4fe8);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+/* 同步菜单 */
+.sync-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 160px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  overflow: hidden;
+  animation: menuFadeIn 0.15s ease;
 }
 
-.cursor-export-btn:disabled {
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sync-menu-header {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sync-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.sync-menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sync-menu-item.active {
+  color: var(--accent-cyan);
+}
+
+.sync-menu-item svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 最后同步时间 */
+.last-sync-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Pull 按钮 */
+.pull-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 6px 12px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.pull-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.pull-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.cursor-export-btn svg {
-  width: 16px;
-  height: 16px;
+.pull-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .btn-spinner {
@@ -221,16 +347,5 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-/* 导出组 - 日期选择器 + 导出按钮 */
-.export-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.export-group .cursor-export-btn {
-  padding: 8px 12px;
 }
 

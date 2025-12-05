@@ -11,7 +11,7 @@ const getIpcRenderer = () => {
   return null
 }
 
-const CursorDashboard = ({ onExportCSV }) => {
+const CursorDashboard = ({ onDataPulled }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
@@ -111,8 +111,8 @@ const CursorDashboard = ({ onExportCSV }) => {
     }
   }, [])
 
-  // 导出 CSV
-  const handleExportCSV = useCallback(async () => {
+  // Pull 数据
+  const handlePullData = useCallback(async () => {
     const ipc = getIpcRenderer()
     if (!ipc) {
       alert('此功能仅在 Electron 环境下可用')
@@ -121,33 +121,34 @@ const CursorDashboard = ({ onExportCSV }) => {
 
     try {
       setIsLoading(true)
-      const result = await ipc.invoke('download-cursor-csv')
+      const result = await ipc.invoke('pull-cursor-data')
       setIsLoading(false)
       
       if (result.success) {
-        if (onExportCSV) {
-          onExportCSV({
+        if (onDataPulled) {
+          onDataPulled({
             filePath: result.filePath,
             fileName: result.fileName,
             content: result.content,
-            size: result.size
+            size: result.size,
+            syncTime: result.syncTime
           })
         }
       } else {
-        alert(`下载失败: ${result.error}`)
+        alert(`同步失败: ${result.error}`)
       }
     } catch (error) {
       setIsLoading(false)
-      console.error('导出 CSV 失败:', error)
-      alert(`导出失败: ${error.message}`)
+      console.error('Pull 数据失败:', error)
+      alert(`同步失败: ${error.message}`)
     }
-  }, [onExportCSV])
+  }, [onDataPulled])
 
-  // 打开下载目录
-  const handleOpenDownloadDir = useCallback(async () => {
+  // 打开数据目录
+  const handleOpenDataDir = useCallback(async () => {
     const ipc = getIpcRenderer()
     if (!ipc) return
-    await ipc.invoke('open-csv-download-dir')
+    await ipc.invoke('open-data-dir')
   }, [])
 
   // 非 Electron 环境显示提示
@@ -177,30 +178,30 @@ const CursorDashboard = ({ onExportCSV }) => {
           <div className="logged-in-view">
             <div className="status-card success">
               <span className="status-icon">✅</span>
-              <h2>已登录 Cursor</h2>
-              <p>您可以导出 CSV 数据到查看器中分析</p>
+              <h2>已连接 Cursor</h2>
+              <p>您可以在「数据分析」页面 Pull 最新数据</p>
             </div>
 
             <div className="action-cards">
-              <div className="action-card primary" onClick={handleExportCSV}>
+              <div className="action-card primary" onClick={handlePullData}>
                 {isLoading ? (
                   <>
                     <div className="loading-spinner small"></div>
-                    <span className="action-title">正在导出...</span>
+                    <span className="action-title">正在同步...</span>
                   </>
                 ) : (
                   <>
                     <span className="action-icon">📥</span>
-                    <span className="action-title">导出本月 CSV</span>
-                    <span className="action-desc">下载并自动打开到 CSV 查看器</span>
+                    <span className="action-title">Pull 数据</span>
+                    <span className="action-desc">拉取最新使用数据</span>
                   </>
                 )}
               </div>
 
-              <div className="action-card" onClick={handleOpenDownloadDir}>
+              <div className="action-card" onClick={handleOpenDataDir}>
                 <span className="action-icon">📁</span>
-                <span className="action-title">打开下载目录</span>
-                <span className="action-desc">查看所有已下载的 CSV 文件</span>
+                <span className="action-title">打开数据目录</span>
+                <span className="action-desc">查看本地数据文件</span>
               </div>
 
               <div className="action-card" onClick={handleOpenBrowser}>
@@ -220,7 +221,7 @@ const CursorDashboard = ({ onExportCSV }) => {
             <div className="login-card">
               <span className="login-icon">⚡</span>
               <h2>连接到 Cursor</h2>
-              <p>需要登录您的 Cursor 账户以导出使用数据</p>
+              <p>需要登录您的 Cursor 账户以同步使用数据</p>
               
               <div className="login-steps">
                 <div className="step">
@@ -233,7 +234,7 @@ const CursorDashboard = ({ onExportCSV }) => {
                 </div>
                 <div className="step">
                   <span className="step-number">3</span>
-                  <span className="step-text">开始导出数据</span>
+                  <span className="step-text">开始 Pull 数据</span>
                 </div>
               </div>
               
@@ -275,10 +276,10 @@ const CursorDashboard = ({ onExportCSV }) => {
 
             <div className="features-list">
               <div className="feature-item">
-                <span className="feature-icon">📊</span>
+                <span className="feature-icon">🔄</span>
                 <div className="feature-text">
-                  <strong>自动导出</strong>
-                  <span>一键导出使用数据到 CSV 查看器</span>
+                  <strong>自动同步</strong>
+                  <span>设置间隔自动 Pull 最新数据</span>
                 </div>
               </div>
               <div className="feature-item">
@@ -291,8 +292,8 @@ const CursorDashboard = ({ onExportCSV }) => {
               <div className="feature-item">
                 <span className="feature-icon">⚡</span>
                 <div className="feature-text">
-                  <strong>快速分析</strong>
-                  <span>导出后自动打开进行数据分析</span>
+                  <strong>实时分析</strong>
+                  <span>Pull 后自动更新数据分析</span>
                 </div>
               </div>
             </div>

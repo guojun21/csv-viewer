@@ -5,20 +5,20 @@ import CursorDashboard from './components/cursor-dashboard'
 import './App.css'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('csv-viewer')
-  const [externalCSV, setExternalCSV] = useState(null)
+  const [activeTab, setActiveTab] = useState('data-viewer')
+  const [pulledData, setPulledData] = useState(null)
 
-  // 处理从 Dashboard 导出的 CSV
-  const handleExportCSV = useCallback((csvData) => {
-    // csvData 包含 { filePath, fileName, content, size }
-    setExternalCSV(csvData)
-    // 自动切换到 CSV 查看器 Tab
-    setActiveTab('csv-viewer')
+  // 处理从 Dashboard Pull 的数据
+  const handleDataPulled = useCallback((data) => {
+    // data 包含 { filePath, fileName, content, size, syncTime }
+    setPulledData(data)
+    // 自动切换到数据分析 Tab
+    setActiveTab('data-viewer')
   }, [])
 
-  // 清除外部 CSV 引用
-  const handleClearExternalCSV = useCallback(() => {
-    setExternalCSV(null)
+  // 清除外部数据引用
+  const handleClearPulledData = useCallback(() => {
+    setPulledData(null)
   }, [])
 
   // 需要登录时跳转到 Cursor Dashboard
@@ -34,17 +34,17 @@ function App() {
       />
       
       <div className="tab-content">
-        {activeTab === 'csv-viewer' && (
+        {activeTab === 'data-viewer' && (
           <CSVViewer 
-            externalCSV={externalCSV}
-            onClearExternalCSV={handleClearExternalCSV}
+            externalCSV={pulledData}
+            onClearExternalCSV={handleClearPulledData}
             onNeedLogin={handleNeedLogin}
           />
         )}
         
         {activeTab === 'cursor-dashboard' && (
           <CursorDashboard 
-            onExportCSV={handleExportCSV}
+            onDataPulled={handleDataPulled}
           />
         )}
       </div>

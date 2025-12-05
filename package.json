@@ -1,7 +1,7 @@
 {
-  "name": "csv-viewer",
+  "name": "cursor-tracker",
   "version": "1.0.0",
-  "description": "A powerful CSV data viewer with sortable and configurable columns",
+  "description": "Cursor usage data tracker and analyzer",
   "main": "main.cjs",
   "scripts": {
     "dev": "vite",
@@ -12,8 +12,8 @@
     "package": "vite build && electron-builder"
   },
   "build": {
-    "appId": "com.csv-viewer.app",
-    "productName": "CSV Viewer",
+    "appId": "com.cursor-tracker.app",
+    "productName": "Cursor Tracker",
     "directories": {
       "output": "release"
     },
@@ -35,7 +35,8 @@
     "electron-store": "^11.0.2",
     "papaparse": "^5.4.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "recharts": "^3.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^3.1.0",

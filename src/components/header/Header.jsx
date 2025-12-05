@@ -1,6 +1,17 @@
-import React from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { LiquidGlassDatePicker } from '../datepicker'
 import './Header.css'
+
+// 同步间隔选项（毫秒）
+const SYNC_INTERVAL_OPTIONS = [
+  { label: '关闭', value: 0 },
+  { label: '10秒', value: 10 * 1000 },
+  { label: '30秒', value: 30 * 1000 },
+  { label: '1分钟', value: 60 * 1000 },
+  { label: '5分钟', value: 5 * 60 * 1000 },
+  { label: '10分钟', value: 10 * 60 * 1000 },
+  { label: '30分钟', value: 30 * 60 * 1000 },
+]
 
 function Header({ 
   fileName, 
@@ -14,21 +25,48 @@ function Header({
   onDensityChange,
   dateRange,
   onDateRangeChange,
-  hasData
+  hasData,
+  onPullData,
+  isPulling,
+  lastSyncTime,
+  syncInterval,
+  onSyncIntervalChange
 }) {
+  const [showSyncMenu, setShowSyncMenu] = useState(false)
+  const syncMenuRef = useRef(null)
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (syncMenuRef.current && !syncMenuRef.current.contains(e.target)) {
+        setShowSyncMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // 格式化最后同步时间
+  const formatSyncTime = useCallback((timestamp) => {
+    if (!timestamp) return '从未同步'
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now - date
+    
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
+    return date.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }, [])
+
+  // 获取当前同步间隔的标签
+  const getCurrentIntervalLabel = useCallback(() => {
+    const option = SYNC_INTERVAL_OPTIONS.find(o => o.value === syncInterval)
+    return option ? option.label : '关闭'
+  }, [syncInterval])
   return (
     <header className="header drag-region">
       <div className="header-left">
-        <div className="app-title">
-          <svg className="app-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="8" y1="13" x2="16" y2="13"/>
-            <line x1="8" y1="17" x2="16" y2="17"/>
-          </svg>
-          <span>CSV Viewer</span>
-        </div>
-        
         {fileName && (
           <div className="file-info animate-fade-in">
             <span className="file-name">{fileName}</span>
@@ -111,6 +149,81 @@ function Header({
           </svg>
         </button>
         
+        {/* 同步控制区域 */}
+        {onPullData && (
+          <div className="sync-group">
+            {/* 同步间隔选择器 */}
+            <div className="sync-interval-wrapper" ref={syncMenuRef}>
+              <button 
+                className="sync-interval-btn"
+                onClick={() => setShowSyncMenu(!showSyncMenu)}
+                title="设置自动同步间隔"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span className="interval-label">{getCurrentIntervalLabel()}</span>
+                <svg className="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              
+              {showSyncMenu && (
+                <div className="sync-menu">
+                  <div className="sync-menu-header">自动同步间隔</div>
+                  {SYNC_INTERVAL_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      className={`sync-menu-item ${syncInterval === option.value ? 'active' : ''}`}
+                      onClick={() => {
+                        onSyncIntervalChange(option.value)
+                        setShowSyncMenu(false)
+                      }}
+                    >
+                      {option.label}
+                      {syncInterval === option.value && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 最后同步时间 */}
+            <span className="last-sync-time" title={lastSyncTime ? new Date(lastSyncTime).toLocaleString() : '从未同步'}>
+              {formatSyncTime(lastSyncTime)}
+            </span>
+
+            {/* Pull 按钮 */}
+            <button 
+              className="header-btn pull-btn"
+              onClick={onPullData}
+              disabled={isPulling}
+              title="从 Cursor 拉取最新数据"
+            >
+              {isPulling ? (
+                <>
+                  <div className="btn-spinner"></div>
+                  <span>同步中...</span>
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  <span>Pull</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+        
         {/* 打开文件按钮 */}
         <button 
           className="header-btn primary-btn"
@@ -127,4 +240,3 @@ function Header({
 }
 
 export default Header
-

@@ -1,22 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react'
 import ReactDOM from 'react-dom'
+import CostTrendChart from './CostTrendChart'
 import './StatisticBar.css'
 
 /**
- * CostStatCard - 费用统计卡片
- * 点击展开显示详细统计信息
+ * CostStatCard - Cost 趋势统计卡片
+ * 点击展开显示 Cost 趋势图
  */
-function CostStatCard({ stats, columnName, mode = 'liquid' }) {
+function CostStatCard({ stats, data, mode = 'liquid' }) {
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const [granularity, setGranularity] = useState('hour')
+  const [chartType, setChartType] = useState('discrete')
   const containerRef = useRef(null)
   const triggerRef = useRef(null)
 
-  // 点击外部关闭 - 现在通过 overlay 处理
+  // 点击外部关闭
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // 检查点击是否在 dropdown 内
-      const dropdown = document.querySelector('.stat-card-dropdown')
+      const dropdown = document.querySelector('.cost-stat-card-dropdown')
       if (dropdown && dropdown.contains(event.target)) {
         return
       }
@@ -33,10 +35,6 @@ function CostStatCard({ stats, columnName, mode = 'liquid' }) {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
-
-  const formatCurrency = (value) => {
-    return `$${value.toFixed(2)}`
-  }
 
   // 计算 dropdown 位置
   const updateDropdownPosition = () => {
@@ -65,13 +63,14 @@ function CostStatCard({ stats, columnName, mode = 'liquid' }) {
       >
         <div className="stat-card-icon cost">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="1" x2="12" y2="23"/>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v12"/>
+            <path d="M9 9h6a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"/>
           </svg>
         </div>
         <div className="stat-card-info">
-          <div className="stat-card-label">Total Cost</div>
-          <div className="stat-card-value cost">{formatCurrency(stats.total)}</div>
+          <div className="stat-card-label">Cost Trend</div>
+          <div className="stat-card-value cost">${stats?.totalCost?.toFixed(2) || '0.00'}</div>
         </div>
         <svg className={`stat-card-chevron ${isOpen ? 'open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="6 9 12 15 18 9"/>
@@ -82,8 +81,8 @@ function CostStatCard({ stats, columnName, mode = 'liquid' }) {
         <>
           <div className="stat-card-overlay" onClick={() => setIsOpen(false)} />
           <div 
-            className={`stat-card-dropdown animate-stat-in mode-${mode}`}
-            style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+            className={`cost-stat-card-dropdown stat-card-dropdown animate-stat-in mode-${mode}`}
+            style={{ top: dropdownPosition.top, left: dropdownPosition.left, minWidth: '800px' }}
           >
             {/* 液态玻璃效果层 */}
             <div className="liquidGlass-effect"></div>
@@ -91,45 +90,20 @@ function CostStatCard({ stats, columnName, mode = 'liquid' }) {
             <div className="liquidGlass-shine"></div>
             
             {/* 内容层 */}
-            <div className="liquidGlass-content">
-              <div className="stat-detail-header">
-                <div className="stat-card-icon cost">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                </div>
-                <span className="stat-detail-title">Cost Statistics</span>
-              </div>
-
-              <div className="stat-items">
-                <div className="stat-item">
-                  <span className="stat-item-label">总计 (Total)</span>
-                  <span className="stat-item-value highlight">{formatCurrency(stats.total)}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-item-label">平均 (Average)</span>
-                  <span className="stat-item-value">{formatCurrency(stats.avg)}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-item-label">最高 (Max)</span>
-                  <span className="stat-item-value">{formatCurrency(stats.max)}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-item-label">最低 (Min)</span>
-                  <span className="stat-item-value">{formatCurrency(stats.min)}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-item-label">记录数 (Count)</span>
-                  <span className="stat-item-value">{stats.count.toLocaleString()}</span>
-                </div>
-              </div>
+            <div className="liquidGlass-content" style={{ padding: '20px' }}>
+              <CostTrendChart
+                data={data}
+                granularity={granularity}
+                chartType={chartType}
+                onGranularityChange={setGranularity}
+                onChartTypeChange={setChartType}
+              />
             </div>
             
             {/* SVG 滤镜定义 */}
             <svg style={{ position: 'absolute', width: 0, height: 0 }}>
               <defs>
-                <filter id="glass-distortion-stat" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
+                <filter id="glass-distortion-stat-cost" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
                   <feTurbulence type="fractalNoise" baseFrequency="0.01 0.01" numOctaves="1" seed="5" result="turbulence" />
                   <feComponentTransfer in="turbulence" result="mapped">
                     <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />

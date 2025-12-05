@@ -74,11 +74,35 @@ function StatisticBar({ data, columns, glassMode }) {
 
   if (!data.length) return null
 
+  // 准备时间序列数据用于 cost 趋势图
+  const costTrendData = React.useMemo(() => {
+    if (!costColumn) return []
+    
+    // 查找时间戳列
+    const timestampColumn = columns.find(col => {
+      const lower = col.toLowerCase()
+      return lower.includes('date') || lower.includes('time') || lower.includes('timestamp')
+    })
+    
+    return data.map((row, idx) => {
+      const cost = parseFloat(row[costColumn]?.replace('$', '') || 0)
+      const timestamp = row[timestampColumn] || new Date().toISOString()
+      
+      return {
+        index: idx,
+        timestamp,
+        cost: isNaN(cost) ? 0 : cost,
+        model: row[modelColumn] || 'Unknown'
+      }
+    })
+  }, [data, costColumn, modelColumn, columns])
+
   return (
     <div className="statistic-bar">
       {costStats && (
         <CostStatCard 
-          stats={costStats} 
+          stats={{ ...costStats, totalCost: costStats.total }} 
+          data={costTrendData}
           columnName={costColumn}
           mode={glassMode}
         />

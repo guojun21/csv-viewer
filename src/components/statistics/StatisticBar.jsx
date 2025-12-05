@@ -32,23 +32,45 @@ function StatisticBar({ data, columns, glassMode }) {
     return { total, avg, max, min, count: values.length }
   }, [data, costColumn])
 
-  // 计算 model 统计
+  // 计算 model 统计（包含每个模型的 cost）
   const modelStats = React.useMemo(() => {
     if (!modelColumn || !data.length) return null
     
     const distribution = {}
     data.forEach(row => {
       const model = row[modelColumn] || 'Unknown'
-      distribution[model] = (distribution[model] || 0) + 1
+      if (!distribution[model]) {
+        distribution[model] = { count: 0, cost: 0 }
+      }
+      distribution[model].count += 1
+      
+      // 累加 cost（如果有 cost 列）
+      if (costColumn) {
+        const cost = parseFloat(row[costColumn]?.replace('$', '') || 0)
+        if (!isNaN(cost)) {
+          distribution[model].cost += cost
+        }
+      }
     })
     
     // 转换为数组并排序
     const models = Object.entries(distribution)
-      .map(([name, count]) => ({ name, count, percentage: (count / data.length) * 100 }))
+      .map(([name, data]) => ({ 
+        name, 
+        count: data.count, 
+        cost: data.cost,
+        percentage: (data.count / data.length) * 100 
+      }))
       .sort((a, b) => b.count - a.count)
     
-    return { models, total: data.length }
-  }, [data, modelColumn])
+    // 重新计算百分比（因为上面的 data.length 引用错误）
+    const total = data.length
+    models.forEach(m => {
+      m.percentage = (m.count / total) * 100
+    })
+    
+    return { models, total }
+  }, [data, modelColumn, costColumn])
 
   if (!data.length) return null
 

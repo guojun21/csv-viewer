@@ -6,9 +6,17 @@ import './StatisticBar.css'
  * ModelStatCard - 模型分布统计卡片
  * 点击展开显示模型使用分布
  */
+// 排序选项
+const SORT_OPTIONS = [
+  { key: 'count', label: '次数' },
+  { key: 'cost', label: '总Cost' },
+  { key: 'avgCost', label: '平均Cost' }
+]
+
 function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const [sortBy, setSortBy] = useState('count') // 'count' | 'cost' | 'avgCost'
   const containerRef = useRef(null)
   const triggerRef = useRef(null)
 
@@ -34,8 +42,40 @@ function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
     }
   }, [isOpen])
 
+  // 根据排序方式对模型进行排序
+  const sortedModels = React.useMemo(() => {
+    const models = [...stats.models].map(m => ({
+      ...m,
+      avgCost: m.count > 0 ? m.cost / m.count : 0
+    }))
+    
+    return models.sort((a, b) => {
+      if (sortBy === 'count') return b.count - a.count
+      if (sortBy === 'cost') return b.cost - a.cost
+      if (sortBy === 'avgCost') return b.avgCost - a.avgCost
+      return 0
+    })
+  }, [stats.models, sortBy])
+
+  // 计算柱状图的最大值（用于百分比计算）
+  const maxValue = React.useMemo(() => {
+    if (sortBy === 'count') return Math.max(...sortedModels.map(m => m.count))
+    if (sortBy === 'cost') return Math.max(...sortedModels.map(m => m.cost))
+    if (sortBy === 'avgCost') return Math.max(...sortedModels.map(m => m.avgCost))
+    return 1
+  }, [sortedModels, sortBy])
+
+  // 获取柱状图宽度百分比
+  const getBarWidth = (model) => {
+    if (maxValue === 0) return 0
+    if (sortBy === 'count') return (model.count / maxValue) * 100
+    if (sortBy === 'cost') return (model.cost / maxValue) * 100
+    if (sortBy === 'avgCost') return (model.avgCost / maxValue) * 100
+    return 0
+  }
+
   // 获取最常用的模型
-  const topModel = stats.models[0]
+  const topModel = sortedModels[0]
   const modelCount = stats.models.length
 
   // 计算 dropdown 位置
@@ -104,30 +144,42 @@ function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
                 <span className="stat-detail-title">Model Distribution</span>
               </div>
 
+              {/* 排序切换按钮 */}
+              <div className="sort-toggle-group">
+                {SORT_OPTIONS.map(option => (
+                  <button
+                    key={option.key}
+                    className={`sort-toggle-btn ${sortBy === option.key ? 'active' : ''}`}
+                    onClick={() => setSortBy(option.key)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="model-distribution">
-                {stats.models.slice(0, 6).map((model, index) => (
+                {sortedModels.map((model, index) => (
                   <div className="model-item" key={model.name}>
                     <div className="model-item-header">
                       <span className="model-name">{model.name}</span>
                       <span className="model-count">
                         {model.count.toLocaleString()} ({model.percentage.toFixed(1)}%)
+                        {model.cost > 0 && (
+                          <>
+                            <span className="model-cost"> · ${model.cost.toFixed(2)}</span>
+                            <span className="model-avg-cost"> (avg: ${model.avgCost.toFixed(4)})</span>
+                          </>
+                        )}
                       </span>
                     </div>
                     <div className="model-bar-bg">
                       <div 
                         className={`model-bar color-${index % 6}`}
-                        style={{ width: `${model.percentage}%` }}
+                        style={{ width: `${getBarWidth(model)}%` }}
                       />
                     </div>
                   </div>
                 ))}
-                
-                {stats.models.length > 6 && (
-                  <div className="stat-item" style={{ marginTop: '8px' }}>
-                    <span className="stat-item-label">其他模型</span>
-                    <span className="stat-item-value">{stats.models.length - 6} 个</span>
-                  </div>
-                )}
               </div>
             </div>
             

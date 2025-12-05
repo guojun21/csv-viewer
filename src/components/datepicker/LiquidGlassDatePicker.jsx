@@ -18,6 +18,7 @@ function LiquidGlassDatePicker({ value, onChange, onConfirm, mode = 'liquid' }) 
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
   const containerRef = useRef(null)
   const triggerRef = useRef(null)
+  const dropdownRef = useRef(null)
 
   const {
     startDate,
@@ -49,10 +50,14 @@ function LiquidGlassDatePicker({ value, onChange, onConfirm, mode = 'liquid' }) 
     }
   }, [value])
 
-  // 点击外部关闭
+  // 点击外部关闭 - 需要同时检查 trigger 和 dropdown（因为 dropdown 是 portal 渲染的）
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      const clickedOutsideTrigger = containerRef.current && !containerRef.current.contains(event.target)
+      const clickedOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(event.target)
+      
+      // 只有当点击既不在 trigger 也不在 dropdown 内时才关闭
+      if (clickedOutsideTrigger && clickedOutsideDropdown) {
         setIsOpen(false)
       }
     }
@@ -127,6 +132,7 @@ function LiquidGlassDatePicker({ value, onChange, onConfirm, mode = 'liquid' }) 
         <>
           <div className="date-picker-overlay" onClick={() => setIsOpen(false)} />
           <div 
+            ref={dropdownRef}
             className={`date-picker-dropdown animate-scale-in mode-${mode}`}
             style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
           >

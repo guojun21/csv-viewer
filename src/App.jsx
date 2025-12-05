@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import Header from './components/Header'
+import Header from './components/header'
 import { StatisticBar } from './components/statistics'
-import DataTable from './components/DataTable'
-import ColumnSettings from './components/ColumnSettings'
-import EmptyState from './components/EmptyState'
+import DataTable from './components/data-table'
+import ColumnSettings from './components/column-settings'
+import EmptyState from './components/empty-state'
 import Papa from 'papaparse'
 import './App.css'
 

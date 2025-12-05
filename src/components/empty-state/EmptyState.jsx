@@ -117,3 +117,4 @@ function EmptyState({ onFileSelect, isLoading, recentFiles = [], onOpenRecent, o
 }
 
 export default EmptyState
+

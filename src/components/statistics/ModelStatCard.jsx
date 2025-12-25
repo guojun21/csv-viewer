@@ -10,13 +10,15 @@ import './StatisticBar.css'
 const SORT_OPTIONS = [
   { key: 'count', label: '次数' },
   { key: 'cost', label: '总Cost' },
-  { key: 'avgCost', label: '平均Cost' }
+  { key: 'avgCost', label: '平均Cost' },
+  { key: 'outPerDollar', label: '性价比(输出/$)' },
+  { key: 'totalPerDollar', label: '性价比(总/$)' }
 ]
 
 function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
-  const [sortBy, setSortBy] = useState('count') // 'count' | 'cost' | 'avgCost'
+  const [sortBy, setSortBy] = useState('count') // 'count' | 'cost' | 'avgCost' | 'outPerDollar' | 'totalPerDollar'
   const containerRef = useRef(null)
   const triggerRef = useRef(null)
 
@@ -44,15 +46,44 @@ function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
 
   // 根据排序方式对模型进行排序
   const sortedModels = React.useMemo(() => {
-    const models = [...stats.models].map(m => ({
-      ...m,
-      avgCost: m.count > 0 ? m.cost / m.count : 0
-    }))
+    // Token 性价比（只用当前 CSV 已有字段）：
+    // - outPerDollar   = outputTokens / cost   （把“产出Token”当作价值，越高越好）
+    // - totalPerDollar = totalTokens / cost    （把“处理Token总量”当作价值，越高越好）
+    const models = [...stats.models].map(m => {
+      const count = Number(m.count) || 0
+      const cost = Number(m.cost) || 0
+      const outputTokens = Number(m.outputTokens) || 0
+      const totalTokens = Number(m.totalTokens) || 0
+      const avgCost = count > 0 ? cost / count : 0
+
+      const outPerDollar = cost > 0 ? outputTokens / cost : (outputTokens > 0 ? Infinity : 0)
+      const totalPerDollar = cost > 0 ? totalTokens / cost : (totalTokens > 0 ? Infinity : 0)
+
+      const avgOutputTokens = count > 0 ? outputTokens / count : 0
+      const avgTotalTokens = count > 0 ? totalTokens / count : 0
+      const costPer1kTotal = totalTokens > 0 ? (cost * 1000) / totalTokens : Infinity
+
+      return {
+        ...m,
+        count,
+        cost,
+        avgCost,
+        outputTokens,
+        totalTokens,
+        avgOutputTokens,
+        avgTotalTokens,
+        outPerDollar,
+        totalPerDollar,
+        costPer1kTotal
+      }
+    })
     
     return models.sort((a, b) => {
       if (sortBy === 'count') return b.count - a.count
       if (sortBy === 'cost') return b.cost - a.cost
       if (sortBy === 'avgCost') return b.avgCost - a.avgCost
+      if (sortBy === 'outPerDollar') return b.outPerDollar - a.outPerDollar
+      if (sortBy === 'totalPerDollar') return b.totalPerDollar - a.totalPerDollar
       return 0
     })
   }, [stats.models, sortBy])
@@ -62,6 +93,8 @@ function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
     if (sortBy === 'count') return Math.max(...sortedModels.map(m => m.count))
     if (sortBy === 'cost') return Math.max(...sortedModels.map(m => m.cost))
     if (sortBy === 'avgCost') return Math.max(...sortedModels.map(m => m.avgCost))
+    if (sortBy === 'outPerDollar') return Math.max(...sortedModels.map(m => m.outPerDollar))
+    if (sortBy === 'totalPerDollar') return Math.max(...sortedModels.map(m => m.totalPerDollar))
     return 1
   }, [sortedModels, sortBy])
 
@@ -71,6 +104,8 @@ function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
     if (sortBy === 'count') return (model.count / maxValue) * 100
     if (sortBy === 'cost') return (model.cost / maxValue) * 100
     if (sortBy === 'avgCost') return (model.avgCost / maxValue) * 100
+    if (sortBy === 'outPerDollar') return (model.outPerDollar / maxValue) * 100
+    if (sortBy === 'totalPerDollar') return (model.totalPerDollar / maxValue) * 100
     return 0
   }
 
@@ -167,7 +202,16 @@ function ModelStatCard({ stats, columnName, mode = 'liquid' }) {
                         {model.cost > 0 && (
                           <>
                             <span className="model-cost"> · ${model.cost.toFixed(2)}</span>
-                            <span className="model-avg-cost"> (avg: ${model.avgCost.toFixed(4)})</span>
+                            <span className="model-avg-cost">
+                              {' '}
+                              (avg: ${model.avgCost.toFixed(4)}
+                              {' · '}
+                              输出/$: {Number.isFinite(model.outPerDollar) ? model.outPerDollar.toFixed(0) : '∞'}
+                              {' · '}
+                              总/$: {Number.isFinite(model.totalPerDollar) ? model.totalPerDollar.toFixed(0) : '∞'}
+                              {' · '}
+                              $/1K总: {Number.isFinite(model.costPer1kTotal) ? model.costPer1kTotal.toFixed(4) : '∞'})
+                            </span>
                           </>
                         )}
                       </span>

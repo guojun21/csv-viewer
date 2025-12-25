@@ -31,6 +31,10 @@ const CSVViewer = ({ externalCSV, onClearExternalCSV, onNeedLogin }) => {
   const [density, setDensity] = useState('default') // 'compact', 'default', 'comfortable'
   const [dateRange, setDateRange] = useState({ start: null, end: null })
   const [recentFiles, setRecentFiles] = useState([])
+  const [fieldFilters, setFieldFilters] = useState({}) // 字段筛选: { fieldName: [selectedValues] }
+  const [isPulling, setIsPulling] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState(null)
+  const [syncInterval, setSyncInterval] = useState(0)
 
   // 初始化加载最近文件列表
   useEffect(() => {
@@ -132,6 +136,76 @@ const CSVViewer = ({ externalCSV, onClearExternalCSV, onNeedLogin }) => {
     }
   }, [parseCSV, onNeedLogin])
 
+  // Pull 数据功能
+  const handlePullData = useCallback(async () => {
+    const ipc = getIpcRenderer()
+    if (!ipc) {
+      alert('此功能仅在 Electron 环境下可用')
+      return
+    }
+
+    try {
+      setIsPulling(true)
+      const result = await ipc.invoke('pull-cursor-data')
+      setIsPulling(false)
+      
+      if (result.success) {
+        // 更新最后同步时间
+        setLastSyncTime(result.syncTime)
+        // 直接解析并显示 CSV
+        parseCSV(result.content, result.fileName, result.size, result.filePath)
+      } else {
+        // 检查是否是登录问题
+        if (result.error && (result.error.includes('登录') || result.error.includes('过期') || result.error.includes('401') || result.error.includes('403'))) {
+          alert(`${result.error}\n\n请切换到"账户设置"页面重新登录`)
+          if (onNeedLogin) {
+            onNeedLogin()
+          }
+        } else {
+          alert(`Pull 失败: ${result.error || '未知错误'}`)
+        }
+      }
+    } catch (error) {
+      setIsPulling(false)
+      console.error('Pull 数据失败:', error)
+      alert(`Pull 失败: ${error.message}`)
+    }
+  }, [parseCSV, onNeedLogin])
+
+  // 初始化加载同步配置
+  useEffect(() => {
+    const loadSyncConfig = async () => {
+      const ipc = getIpcRenderer()
+      if (ipc) {
+        const interval = await ipc.invoke('get-sync-interval')
+        const lastSync = await ipc.invoke('get-last-sync-time')
+        setSyncInterval(interval || 0)
+        setLastSyncTime(lastSync || null)
+      }
+    }
+    loadSyncConfig()
+  }, [])
+
+  // 自动同步
+  useEffect(() => {
+    if (syncInterval === 0) return
+
+    const timer = setInterval(() => {
+      handlePullData()
+    }, syncInterval)
+
+    return () => clearInterval(timer)
+  }, [syncInterval, handlePullData])
+
+  // 处理同步间隔变化
+  const handleSyncIntervalChange = useCallback(async (interval) => {
+    setSyncInterval(interval)
+    const ipc = getIpcRenderer()
+    if (ipc) {
+      await ipc.invoke('set-sync-interval', interval)
+    }
+  }, [])
+
   // 处理文件选择
   const handleFileSelect = useCallback(async () => {
     const ipc = getIpcRenderer()
@@ -218,42 +292,56 @@ const CSVViewer = ({ externalCSV, onClearExternalCSV, onNeedLogin }) => {
     return columns.find(col => col.toLowerCase().includes('date'))
   }, [columns])
 
-  // 根据日期范围筛选数据
+  // 根据日期范围和字段筛选数据
   const filteredData = React.useMemo(() => {
-    if (!dateRange.start && !dateRange.end) return data
-    if (!dateColumn) return data
+    let result = data
 
-    return data.filter(row => {
-      const dateValue = row[dateColumn]
-      if (!dateValue) return false
-      
-      const rowDate = new Date(dateValue)
-      if (isNaN(rowDate)) return false
+    // 日期筛选
+    if ((dateRange.start || dateRange.end) && dateColumn) {
+      result = result.filter(row => {
+        const dateValue = row[dateColumn]
+        if (!dateValue) return false
+        
+        const rowDate = new Date(dateValue)
+        if (isNaN(rowDate)) return false
 
-      // 设置日期边界（开始日期的开始时刻，结束日期的结束时刻）
-      if (dateRange.start && dateRange.end) {
-        const startOfDay = new Date(dateRange.start)
-        startOfDay.setHours(0, 0, 0, 0)
-        const endOfDay = new Date(dateRange.end)
-        endOfDay.setHours(23, 59, 59, 999)
-        return rowDate >= startOfDay && rowDate <= endOfDay
-      }
-      
-      if (dateRange.start) {
-        const startOfDay = new Date(dateRange.start)
-        startOfDay.setHours(0, 0, 0, 0)
-        return rowDate >= startOfDay
-      }
-      
-      if (dateRange.end) {
-        const endOfDay = new Date(dateRange.end)
-        endOfDay.setHours(23, 59, 59, 999)
-        return rowDate <= endOfDay
-      }
+        // 设置日期边界（开始日期的开始时刻，结束日期的结束时刻）
+        if (dateRange.start && dateRange.end) {
+          const startOfDay = new Date(dateRange.start)
+          startOfDay.setHours(0, 0, 0, 0)
+          const endOfDay = new Date(dateRange.end)
+          endOfDay.setHours(23, 59, 59, 999)
+          return rowDate >= startOfDay && rowDate <= endOfDay
+        }
+        
+        if (dateRange.start) {
+          const startOfDay = new Date(dateRange.start)
+          startOfDay.setHours(0, 0, 0, 0)
+          return rowDate >= startOfDay
+        }
+        
+        if (dateRange.end) {
+          const endOfDay = new Date(dateRange.end)
+          endOfDay.setHours(23, 59, 59, 999)
+          return rowDate <= endOfDay
+        }
 
-      return true
+        return true
+      })
+    }
+
+    // 字段筛选
+    Object.entries(fieldFilters).forEach(([fieldName, selectedValues]) => {
+      if (selectedValues && selectedValues.length > 0) {
+        result = result.filter(row => {
+          const value = String(row[fieldName] || '')
+          return selectedValues.includes(value)
+        })
+      }
     })
-  }, [data, dateRange, dateColumn])
+
+    return result
+  }, [data, dateRange, dateColumn, fieldFilters])
 
   // 获取排序后的数据
   const sortedData = React.useMemo(() => {
@@ -332,6 +420,15 @@ const CSVViewer = ({ externalCSV, onClearExternalCSV, onNeedLogin }) => {
         hasData={data.length > 0}
         onExportFromCursor={isElectron ? handleExportFromCursor : null}
         isExporting={isExporting}
+        data={data}
+        columns={columns}
+        fieldFilters={fieldFilters}
+        onFieldFiltersChange={setFieldFilters}
+        onPullData={isElectron ? handlePullData : null}
+        isPulling={isPulling}
+        lastSyncTime={lastSyncTime}
+        syncInterval={syncInterval}
+        onSyncIntervalChange={handleSyncIntervalChange}
       />
       
       {/* 统计栏 - 放在 main-content 外面避免 overflow 裁剪 */}

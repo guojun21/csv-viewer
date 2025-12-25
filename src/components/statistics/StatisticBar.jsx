@@ -14,6 +14,16 @@ function StatisticBar({ data, columns, glassMode }) {
   // 查找 model 列
   const modelColumn = columns.find(col => col.toLowerCase().includes('model'))
 
+  // 查找 token 列（Cursor 导出通常包含 Output Tokens / Total Tokens）
+  const outputTokensColumn = columns.find(col => {
+    const lower = col.toLowerCase()
+    return lower.includes('output') && lower.includes('token')
+  })
+  const totalTokensColumn = columns.find(col => {
+    const lower = col.toLowerCase()
+    return lower.includes('total') && lower.includes('token')
+  })
+
   // 计算 cost 统计
   const costStats = React.useMemo(() => {
     if (!costColumn || !data.length) return null
@@ -40,7 +50,7 @@ function StatisticBar({ data, columns, glassMode }) {
     data.forEach(row => {
       const model = row[modelColumn] || 'Unknown'
       if (!distribution[model]) {
-        distribution[model] = { count: 0, cost: 0 }
+        distribution[model] = { count: 0, cost: 0, outputTokens: 0, totalTokens: 0 }
       }
       distribution[model].count += 1
       
@@ -51,6 +61,16 @@ function StatisticBar({ data, columns, glassMode }) {
           distribution[model].cost += cost
         }
       }
+
+      // 累加 tokens（如果有 token 列）
+      if (outputTokensColumn) {
+        const v = parseFloat(row[outputTokensColumn] || 0)
+        if (!isNaN(v)) distribution[model].outputTokens += v
+      }
+      if (totalTokensColumn) {
+        const v = parseFloat(row[totalTokensColumn] || 0)
+        if (!isNaN(v)) distribution[model].totalTokens += v
+      }
     })
     
     // 转换为数组并排序
@@ -59,6 +79,8 @@ function StatisticBar({ data, columns, glassMode }) {
         name, 
         count: data.count, 
         cost: data.cost,
+        outputTokens: data.outputTokens,
+        totalTokens: data.totalTokens,
         percentage: (data.count / data.length) * 100 
       }))
       .sort((a, b) => b.count - a.count)
@@ -69,8 +91,8 @@ function StatisticBar({ data, columns, glassMode }) {
       m.percentage = (m.count / total) * 100
     })
     
-    return { models, total }
-  }, [data, modelColumn, costColumn])
+    return { models, total, outputTokensColumn, totalTokensColumn }
+  }, [data, modelColumn, costColumn, outputTokensColumn, totalTokensColumn])
 
   if (!data.length) return null
 

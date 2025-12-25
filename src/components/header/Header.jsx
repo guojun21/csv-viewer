@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { LiquidGlassDatePicker } from '../datepicker'
+import FieldFilter from '../field-filter'
 import './Header.css'
 
 // 同步间隔选项（毫秒）
@@ -30,7 +31,11 @@ function Header({
   isPulling,
   lastSyncTime,
   syncInterval,
-  onSyncIntervalChange
+  onSyncIntervalChange,
+  data,
+  columns,
+  fieldFilters,
+  onFieldFiltersChange
 }) {
   const [showSyncMenu, setShowSyncMenu] = useState(false)
   const syncMenuRef = useRef(null)
@@ -64,6 +69,26 @@ function Header({
     const option = SYNC_INTERVAL_OPTIONS.find(o => o.value === syncInterval)
     return option ? option.label : '关闭'
   }, [syncInterval])
+
+  // 需要筛选的字段列表（可以根据实际需要配置）
+  const filterableFields = React.useMemo(() => {
+    if (!columns || columns.length === 0) return []
+    
+    // 自动识别需要筛选的字段：kind, model, type 等
+    const commonFilterFields = ['kind', 'model', 'type', 'status', 'category']
+    return columns.filter(col => 
+      commonFilterFields.some(field => col.toLowerCase().includes(field.toLowerCase()))
+    )
+  }, [columns])
+
+  // 处理字段筛选变化
+  const handleFieldFilterChange = useCallback((fieldName, selectedValues) => {
+    onFieldFiltersChange(prev => ({
+      ...prev,
+      [fieldName]: selectedValues
+    }))
+  }, [onFieldFiltersChange])
+
   return (
     <header className="header drag-region">
       <div className="header-left">
@@ -81,6 +106,18 @@ function Header({
       </div>
       
       <div className="header-right no-drag">
+        {/* 字段筛选 */}
+        {hasData && filterableFields.map(fieldName => (
+          <FieldFilter
+            key={fieldName}
+            fieldName={fieldName}
+            data={data}
+            selectedValues={fieldFilters[fieldName] || []}
+            onChange={(values) => handleFieldFilterChange(fieldName, values)}
+            mode="blur"
+          />
+        ))}
+
         {/* 日期范围筛选 */}
         {hasData && (
           <LiquidGlassDatePicker
